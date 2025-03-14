@@ -9,11 +9,14 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/howler": "^2.2.12",
+    "@types/stats.js": "^0.17.3",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   },
   "dependencies": {
     "@pixi/assets": "^7.4.3",
+    "howler": "^2.2.4",
     "perlin-noise": "^0.0.1",
     "pixi.js": "^7.4.3",
     "stats.js": "^0.17.0"

@@ -1,4 +1,5 @@
 import Stats from 'stats.js';
+import * as PIXI from 'pixi.js';
 
 export class FPSCounter {
     private stats: Stats;

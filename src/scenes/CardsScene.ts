@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { TextUtils } from '../utils/TextUtils';
 import { UIUtils } from '../utils/UIUtils';
+import {Howl, Howler} from 'howler';
 
 export class CardsScene extends PIXI.Container {
     private cards: PIXI.Sprite[] = [];
@@ -18,12 +19,18 @@ export class CardsScene extends PIXI.Container {
     private intervalId?: number;
     private activeStackIndex = 0;
 
+    private audioShuffle: Howl | undefined;
+    private audioCardMove: Howl | undefined;
+
     constructor() {
         super();
         this.createScene();
         this.createStacks();
         this.createCards();
         this.createUI();
+        this.loadAudio();
+        this.playShuffle();
+        this.waitForClick();
         this.startCardAnimation();
     }
 
@@ -99,6 +106,30 @@ export class CardsScene extends PIXI.Container {
         this.addChild(buttonsDescription);
     }
 
+    private loadAudio() {
+        Howler.volume(0.5);
+
+        this.audioShuffle = new Howl({
+            src: ['./audio/chat/shuffle_cards.ogg'],
+        });
+
+        this.audioCardMove = new Howl({
+            src: ['./audio/cards/card_sound.ogg']
+        })
+    }
+
+    private waitForClick() {
+        window.addEventListener('focus', function() {
+            Howler.stop();
+        });
+    }
+
+    private playShuffle() {
+        if (this.audioShuffle !== undefined) {
+            this.audioShuffle.play();
+        }
+    }
+
     private setSpeed(newAmount: number) {
         if (newAmount < 200) return;
         if (newAmount > 2000) return;
@@ -118,13 +149,17 @@ export class CardsScene extends PIXI.Container {
             this.moveTopCard();
         }, this.animationInterval);
     }
-
+    
     /**
      * Moves the top card to another stack.
-     */
-    private moveTopCard() {
-        if (this.cards.length === 0) return;
-        if (this.stacksAmount < 2) return;
+    */
+   private moveTopCard() {
+       if (this.cards.length === 0) return;
+       if (this.stacksAmount < 2) return;
+       
+       if (this.audioCardMove !== undefined) {
+           this.audioCardMove.play();
+       }
 
         const topCard = this.cards.pop()!;
         const currentStack = topCard.parent as PIXI.Container;
@@ -194,6 +229,14 @@ export class CardsScene extends PIXI.Container {
         // Destroy all stacks
         this.stacks.forEach(stack => stack.destroy());
         this.stacks = [];
+
+        if (this.audioCardMove !== undefined) { 
+            this.audioCardMove.stop();
+        }
+
+        if (this.audioShuffle !== undefined) {
+            this.audioShuffle.stop();
+        }
 
         // Call parent destroy method
         super.destroy(options);

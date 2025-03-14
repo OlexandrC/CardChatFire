@@ -1,9 +1,6 @@
 import * as PIXI from 'pixi.js';
 
 export class TextUtils {
-    construct() {
-
-    }
 
     /**
      * Creates styled text with effects.
@@ -44,11 +41,11 @@ export class TextUtils {
         PIXI.Ticker.shared.add(animate);
 
         text.destroy = ((originalDestroy) => {
-            return function (options?: PIXI.IDestroyOptions | boolean) {
+            return function (this: PIXI.Text, options?: PIXI.IDestroyOptions | boolean) {
                 PIXI.Ticker.shared.remove(animate);
                 originalDestroy.call(this, options);
             };
-        })(text.destroy);
+        })(text.destroy);        
 
         return text;
     }
@@ -73,7 +70,7 @@ export class TextUtils {
         text.position.set(x, y);
 
         text.destroy = ((originalDestroy) => {
-            return function (options?: PIXI.IDestroyOptions | boolean) {
+            return function (this: PIXI.Text, options?: PIXI.IDestroyOptions | boolean) {
                 originalDestroy.call(this, options);
             };
         })(text.destroy);

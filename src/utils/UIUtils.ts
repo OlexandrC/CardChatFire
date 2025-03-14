@@ -1,10 +1,12 @@
+/**
+ * There are two ways of button elements.
+ * First is using HTML element. It has better quality. But it is unbinded with the canvas. On diferent screens there will be harder to set relative position between HTML button and canvas.
+ * Second way is using PIXI sprite. It can have lower quality, but it alway at the same position. Also we can apply PIXI styles/efects/animations to this type elemnt.
+ */
+
 import * as PIXI from 'pixi.js';
 
 export class UIUtils {
-
-    construct() {
-
-    }
 
     public static createButtonDOM(parameters: {width?: number, height?: number, left?: number, top?: number, right?: number, bottom?: number, name?: string, image?: string}) {
         const button = document.createElement('button');
@@ -28,8 +30,6 @@ export class UIUtils {
 
         if (parameters.name) { button.setAttribute('name', parameters.name); }
 
-        document.body.appendChild(button);
-
         return button;
     }
 
@@ -47,16 +47,15 @@ export class UIUtils {
     
         sprite.x = parameters.x;
         sprite.y = parameters.y;
-        sprite.interactive = true;
-        sprite.buttonMode = true;
+        sprite.eventMode = 'static';
         sprite.anchor.set(0.5);
 
         sprite.on('pointerover', () => {
-            sprite.scale.set(sprite.scale.x * 1.1, sprite.scale.y * 1.1); // Зменшуємо прозорість при наведенні
+            sprite.scale.set(sprite.scale.x * 1.1, sprite.scale.y * 1.1);
         });
         
         sprite.on('pointerout', () => {
-            sprite.scale.set(sprite.scale.x * 0.9, sprite.scale.y * 0.9); // Повертаємо прозорість назад
+            sprite.scale.set(sprite.scale.x * 0.9, sprite.scale.y * 0.9);
         });
     
         return sprite;

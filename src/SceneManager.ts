@@ -3,6 +3,8 @@ import { CardsScene } from './scenes/CardsScene';
 import { ChatScene } from './scenes/ChatScene';
 import { FireScene } from './scenes/FireScene';
 import { UIUtils } from './utils/UIUtils';
+import { FullscreenUtils } from './utils/FullscreenUtils';
+import {Howler} from 'howler';
 
 export class SceneManager {
     private app: PIXI.Application;
@@ -10,7 +12,8 @@ export class SceneManager {
 
     private topStart = 80;
     private interval = 60;
-    private rightPosition = 10;
+
+    private soundMuted = false;
 
     constructor(app: PIXI.Application) {
         this.app = app;
@@ -43,6 +46,19 @@ export class SceneManager {
     }
 
     private createUI() {
+        this.createFullscreenButton();
+
+        this.createSceneButtons();
+
+        this.createAudioButton();
+    }
+
+    private createFullscreenButton() {
+        FullscreenUtils.createFullscreenButton(10, 10, 50);
+        FullscreenUtils.enableFullscreen();
+    }
+
+    private createSceneButtons() {
         const buttonNames: Array<'cards' | 'chat' | 'fire'> = ['cards', 'chat', 'fire'];
     
         buttonNames.forEach((name, index) => {
@@ -53,12 +69,47 @@ export class SceneManager {
                 right: 10,
                 top: this.topStart + index * this.interval,
                 image: this.buttonImages[name]
-            })
+            });
 
             button.addEventListener('click', () => {
                 this.changeScene(name);
             });
+
+            document.body.appendChild(button);
         });
     }
     
+    private createAudioButton() {
+        const button = UIUtils.createButtonDOM({
+            width: 50,
+            height: 50,
+            right: 70,
+            top: 10,
+            image: './images/ui/button_sound.svg'
+        });
+
+        const image = button.querySelector('img');
+        
+        button.addEventListener('click', () => {
+            if(this.soundMuted) {
+                this.soundMuted = false;
+                Howler.mute(this.soundMuted);
+                
+                if (image) {
+                    image.src = './images/ui/button_sound.svg'
+                }
+            } else {
+                this.soundMuted = true;
+                Howler.mute(this.soundMuted);
+                console.log("Sound is now OFF");
+                
+                if (image) {
+                    image.src = './images/ui/button_sound_off.svg';
+                }
+            }
+        });
+        
+
+        document.body.appendChild(button);
+    }
 }

@@ -1,56 +1,135 @@
+/**
+ * Becouse of CORS policy and proxy, we have unstable image loading.
+ * In a real production it goes with backend and frontend set up.
+ */
+
 import * as PIXI from 'pixi.js';
 import { TextUtils } from '../utils/TextUtils';
-import { fetchChatData } from '../utils/API';
+import { ApiService } from '../utils/ApiService';
 import { ChatUtils } from '../utils/ChatUtils';
+import settings from "../Settings.json";
+import {Howl} from 'howler';
 
 export class ChatScene extends PIXI.Container {
     private messages: PIXI.Container;
-    private dialogue: any[];
-    private avatars: Record<string, string>;
-    private emojiMap: Record<string, string>;
+    private dialogue: any[] = [];
+    private avatars: Record<string, string> = {};
+    private emojiMap: Record<string, string> = {};
     private currentIndex = 0;
+
+    private loadingText?: PIXI.Text;
+    private loadingTextIntervalID?: number;
+
+    private loadingTextContent = 'LOADING';
+    private loadingTextAvatars = 'LOADING AVATARS';
+    private loadingTextEmojies = 'LOADING EMOJIES';
+
+    private audioMessage: Howl | undefined;
 
     constructor() {
         super();
+
+        this.createScene();
+
         this.messages = new PIXI.Container();
+        this.messages.y = 580; // Start messages at the bottom of the screen
         this.addChild(this.messages);
 
+        this.showLoading(this.loadingTextContent);
+        this.loadAudio();
         this.loadChatData();
     }
 
+    /**
+     * Creates initial UI components.
+     */
     private createScene() {
         const text = TextUtils.createStyledText('Magic Words', 10, 610);
         this.addChild(text);
     }
 
     /**
-     * Завантажує дані чату через API.
+     * Displays a loading message.
+     */
+    private showLoading(text: string, offsetX?: number) {
+        this.loadingText = TextUtils.createText(
+            text,
+            500 - (offsetX ? offsetX : 0),
+            300,
+            60,
+            0.0
+        );
+
+        this.addChild(this.loadingText);
+        
+        this.loadingTextIntervalID = setInterval(() => {
+            if (this.loadingText) {
+                this.loadingText.text = this.loadingText.text + '.';
+
+                if (text.length + 3 < this.loadingText.text.length) {
+                    this.loadingText.text = text;
+                }
+            }
+        }, 1000);
+    }
+
+    /**
+     * Load audio content
+     */
+    loadAudio() {
+        this.audioMessage = new Howl({
+            src: ['./audio/chat/message.ogg']
+        });
+    }
+
+    /**
+     * Removes the loading message.
+     */
+    private destroyLoading() {
+        clearInterval(this.loadingTextIntervalID);
+        this.loadingText?.destroy();
+    }
+
+    /**
+     * Fetches chat data and initializes message rendering.
      */
     private async loadChatData() {
-        const chatData = await fetchChatData();
+        const chatData = await ApiService.fetchData(settings.chatURI);
+
+        this.destroyLoading();
+
         this.dialogue = chatData.dialogue;
 
-        // Кешуємо аватарки
+        this.showLoading(this.loadingTextAvatars, 150);
+
+        // Cache avatars
         this.avatars = {};
         for (const avatar of chatData.avatars) {
             this.avatars[avatar.name] = avatar.url;
-            await ChatUtils.loadImage(avatar.url);
+            // await ApiService.loadImage(avatar.url);
         }
 
-        // Кешуємо емодзі
+        this.destroyLoading();
+
+        this.showLoading(this.loadingTextEmojies, 250);
+
+        // Cache emojis
         this.emojiMap = {};
         for (const emoji of chatData.emojies) {
             this.emojiMap[emoji.name] = emoji.url;
-            await ChatUtils.loadImage(emoji.url);
+            // await ApiService.loadImage(emoji.url);
         }
+
+        this.destroyLoading();
 
         this.startDialogue();
     }
 
     /**
-     * Починає анімацію додавання повідомлень.
+     * Starts the chat dialogue animation.
      */
     private startDialogue() {
+        
         const interval = setInterval(() => {
             if (this.currentIndex >= this.dialogue.length) {
                 clearInterval(interval);
@@ -64,37 +143,68 @@ export class ChatScene extends PIXI.Container {
     }
 
     /**
-     * Додає нове повідомлення в чат.
+     * Adds a new message to the chat.
      */
     private async addMessage(name: string, text: string) {
-        const isLeft = name === 'Sheldon';
-        const messageBlock = ChatUtils.createMessageBlock(ChatUtils.replaceEmojis(text, this.emojiMap), isLeft);
+        const isLeft = name === 'Sheldon'; // here we should use own user
+        const messageBlock = await ChatUtils.createMessageBlock(text, isLeft, this.avatars[name], this.emojiMap);
 
-        const avatarTexture = await ChatUtils.loadImage(this.avatars[name]);
-        const avatar = new PIXI.Sprite(avatarTexture);
-        avatar.width = 50;
-        avatar.height = 50;
-        avatar.anchor.set(0.5);
-        avatar.x = isLeft ? 30 : 470;
+        this.moveMessagesUp(messageBlock.height);
 
-        const messageContainer = new PIXI.Container();
-        messageBlock.x = isLeft ? 70 : 80;
-        messageBlock.y = 10;
+        this.messages.addChild(messageBlock);
 
-        messageContainer.addChild(avatar, messageBlock);
-        this.messages.addChild(messageContainer);
-
-        this.updateMessages();
+        if (this.audioMessage !== undefined) {
+            this.audioMessage.play();        
+        }
     }
 
     /**
-     * Посуває всі повідомлення вгору при додаванні нового.
+     * Animates all messages moving upwards when a new message is added.
      */
-    private updateMessages() {
-        let yOffset = this.messages.height + 60;
+    private moveMessagesUp(height: number) {
+        const messageSpacing = 5;
+        const animationDuration = 10; // Animation time in seconds
+
+        let targetY = height + messageSpacing;
+        const step = 10;
+
         for (let i = this.messages.children.length - 1; i >= 0; i--) {
-            this.messages.children[i].y = yOffset;
-            yOffset -= 60;
+            const message = this.messages.children[i];
+
+            let messageDiff = targetY;
+
+            const intervalID = setInterval(() => {
+
+                if (!message) { clearInterval(intervalID); }
+
+                if (messageDiff <= step) {
+                    message.y = message.y - messageDiff;
+                    clearInterval(intervalID);
+                }
+
+                message.y = message.y - step;
+                
+                messageDiff = messageDiff - step;
+
+            }, animationDuration);
         }
+    }
+
+    public destroy(options?: PIXI.IDestroyOptions | boolean) {
+        // Stop the interval to prevent errors
+        if (this.loadingTextIntervalID) {
+            clearInterval(this.loadingTextIntervalID);
+        }
+
+        // Remove all animations
+        PIXI.Ticker.shared.stop();
+
+        // this.messages.destroy();
+
+        if (this.audioMessage !== undefined) {
+            this.audioMessage.stop();
+        }
+
+        super.destroy(options);
     }
 }

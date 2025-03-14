@@ -17,16 +17,14 @@ export function generatePerlinTexture(width: number, height: number): PIXI.Textu
         throw new Error("Could not get 2D context for Perlin noise texture");
     }
 
-    const noise = generatePerlinNoise(width, height, { octaveCount: 5, persistence: 0.5 });
+    const noise = generatePerlinNoise(width, height).flat();
 
-    // const color1 = { r: 242, g: 197, b: 61 };  // (#F2C53D)
-    // const color2 = { r: 242, g: 160, b: 61 };  // (#F2A03D)
-    const color1 = { r: 250, g: 250, b: 250 };  // (rgb(250, 250, 250))
-    const color2 = { r: 235, g: 235, b: 235 };  // (rgb(235, 235, 235))
+    const color1 = { r: 250, g: 250, b: 250 };
+    const color2 = { r: 235, g: 235, b: 235 };
 
     const imageData = ctx.createImageData(width, height);
     for (let i = 0; i < noise.length; i++) {
-        const value = noise[i]; // Значення шуму від 0 до 1
+        const value = noise[i]; // Noise from 0 to 1
 
         const r = Math.floor(color1.r + (color2.r - color1.r) * value);
         const g = Math.floor(color1.g + (color2.g - color1.g) * value);

@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { TextUtils } from '../utils/TextUtils';
+import {Howl, Howler} from 'howler';
 
 export class FireScene extends PIXI.Container {
     private particles: Map<PIXI.Sprite, number> = new Map();
@@ -7,14 +8,17 @@ export class FireScene extends PIXI.Container {
     private particlesLifeTime = 40;
     private flareImage = './images/fire/yellow_flare.png';
     private campFireImage = './images/fire/camp_fire_01.png';
-    private fireTexture: PIXI.Texture;
+    private fireTexture: PIXI.Texture | undefined;
     private intervalId?: number;
-    private firePosition = { x: 600, y: 400 }; // Координати вогню
+    private firePosition = { x: 600, y: 400 };
+    private audioFire: Howl | undefined;
 
     constructor() {
         super();
         this.createScene();
         this.createFire();
+        this.loadAudio();
+        this.playAudio();
         this.startAnimation();
     }
 
@@ -31,6 +35,7 @@ export class FireScene extends PIXI.Container {
      */
     private createFire() {
         this.fireTexture = PIXI.Texture.from(this.flareImage);
+
         this.createCampfire();
     }
 
@@ -47,7 +52,22 @@ export class FireScene extends PIXI.Container {
 
         this.addChild(sprite);
     }
-    
+
+    private loadAudio() {
+        Howler.volume(0.5);
+
+        this.audioFire = new Howl({
+            src: './audio/fire/fire_sound.ogg',
+            loop: true
+        })
+
+    }
+
+    private playAudio() {
+        if (this.audioFire !== undefined) {
+            this.audioFire.play();
+        }
+    }
 
     /**
      * Starts the fire animation by adding new particles periodically.
@@ -96,9 +116,9 @@ export class FireScene extends PIXI.Container {
                 continue;
             }
 
-            // Частинка піднімається вгору
+            // flare goes up
             particle.y -= 2 * delta;
-            particle.x += (Math.random() - 0.5) * 2; // Легке хаотичне зміщення
+            particle.x += (Math.random() - 0.5) * 2;
 
             const lifeFactor = remainingLife / this.particlesLifeTime;
             particle.alpha = Math.max(0, lifeFactor);
@@ -113,7 +133,6 @@ export class FireScene extends PIXI.Container {
             this.particles.delete(particle);
         });
     }
-    
 
     /**
      * Cleans up when the scene is destroyed.
@@ -124,6 +143,11 @@ export class FireScene extends PIXI.Container {
         PIXI.Ticker.shared.remove(this.updateParticles, this);
         this.particles.forEach((_, particle) => this.removeChild(particle));
         this.particles.clear();
+
+        if (this.audioFire !== undefined) {
+            this.audioFire.stop();
+        }
+
         super.destroy(options);
     }
 }
